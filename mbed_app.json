@@ -1,0 +1,99 @@
+{
+    "macros": [
+        "MBED_TRACE_MAX_LEVEL=TRACE_LEVEL_INFO",
+        "MBED_CLIENT_USER_CONFIG_FILE=\"mbed_cloud_client_user_config.h\"",
+        "MBED_CLOUD_CLIENT_USER_CONFIG_FILE=\"mbed_cloud_client_user_config.h\"",
+        "PAL_PLATFORM_DEFINED_CONFIGURATION=\"mbedOS_SST.h\"",
+        "PAL_USER_DEFINED_CONFIGURATION=\"mbedOS_SST.h\"",
+        "PELION_BORDER_ROUTER_WITH_NM=0"
+    ],
+    "target_overrides": {
+        "*": {
+            "target.features_add"                       : ["BOOTLOADER", "STORAGE"],
+            "platform.stdio-baud-rate"                  : 115200,
+            "platform.stdio-convert-newlines"           : true,
+            "platform.stdio-buffered-serial"            : true,
+            "platform.stdio-flush-at-exit"              : true,
+            "rtos.main-thread-stack-size"               : 5120,
+            "update-client.storage-locations"           : 1,
+            "mbed-trace.enable"                         : 1,
+            "events.shared-stacksize"                   : 2048,
+            "nsapi.default-wifi-security"               : "WPA_WPA2",
+            "nsapi.default-wifi-ssid"                   : "\"SSID\"",
+            "nsapi.default-wifi-password"               : "\"PASSWORD\"",
+            "nsapi.default-cellular-apn"                : "\"APN\"",
+            "nsapi.default-cellular-sim-pin"            : null,
+            "nsapi.default-cellular-username"           : null,
+            "nsapi.default-cellular-password"           : null,
+            "nsapi.default-stack"                       : "NANOSTACK",
+            "nanostack-hal.event_loop_thread_stack_size": 8192,
+            "mbed-mesh-api.wisun-regulatory-domain"     : "3",
+            "mbed-mesh-api.wisun-device-type"           : "MESH_DEVICE_TYPE_WISUN_BORDER_ROUTER",
+            "mbed-mesh-api.wisun-operating-class"       : "2",
+            "mbed-mesh-api.wisun-operating-mode"        : "3",
+            "mbed-mesh-api.wisun-bc-channel-function"   : "0",
+            "mbed-mesh-api.wisun-uc-channel-function"   : "0",
+            "mbed-mesh-api.wisun-bc-fixed-channel"      : "30",
+            "mbed-mesh-api.wisun-uc-fixed-channel"      : "30",
+            "mbed-mesh-api.wisun-bc-dwell-interval"     : 255,
+            "mbed-mesh-api.wisun-bc-interval"           : 1020,
+            "mbed-mesh-api.wisun-network-name"          : "\"Wi-SUN Network\"",
+            "mbed-mesh-api.6lowpan-nd-panid-filter"     : "0xFFFF",
+            "mbed-mesh-api.6lowpan-nd-security-mode"    : "NONE",
+            "mbed-mesh-api.certificate-header"          : "\"configs/wisun_certificates.h\"",
+            "mbed-mesh-api.root-certificate"            : "WISUN_ROOT_CERTIFICATE",
+            "mbed-mesh-api.own-certificate"             : "WISUN_SERVER_CERTIFICATE",
+            "mbed-mesh-api.own-certificate-key"         : "WISUN_SERVER_KEY",
+            "mbed-mesh-api.mac-neigh-table-size"        : 128,
+            "nsapi.default-mesh-type"                   : "WISUN",
+            "nanostack.configuration"                   : "ws_border_router",
+            "s2lp.provide-default"                      : true,
+            "target.device_has_add"                     : ["802_15_4_PHY"],
+            "nanostack-hal.use-kvstore"                 : true
+        },
+        "DISCO_F769NI": {
+            "target.macros_add"                         : ["MBEDTLS_USER_CONFIG_FILE=\"configs/mbedTLSConfig_pelion_border_router.h\""],
+            "target.network-default-interface-type"     : "ETHERNET",
+            "target.bootloader_img"                     : "bootloader/mbed-bootloader-disco_f769ni-internal_flash_no_rot.bin",
+            "target.header_offset"                      : "0x8000",
+            "target.app_offset"                         : "0x8400",
+            "target.components_add"                     : ["FLASHIAP"],
+            "target.restrict_size"                      : "0xF7C00",
+            "target.flash_dual_bank"                    : 1,
+            "bootloader-size"                           : "0x8000",
+            "update-client.bootloader-details"          : "0x080078CC",
+            "update-client.application-details"         : "(MBED_ROM_START + MBED_BOOTLOADER_SIZE)",
+            "update-client.storage-address"             : "(MBED_CONF_STORAGE_TDB_INTERNAL_INTERNAL_BASE_ADDRESS+MBED_CONF_STORAGE_TDB_INTERNAL_INTERNAL_SIZE)",
+            "update-client.storage-size"                : "(1024*1024-MBED_CONF_STORAGE_TDB_INTERNAL_INTERNAL_SIZE)",
+            "update-client.storage-page"                : 1,
+            "mbed-cloud-client.update-storage"          : "ARM_UCP_FLASHIAP",
+            "storage_tdb_internal.internal_base_address": "(MBED_ROM_START+1024*1024)",
+            "storage_tdb_internal.internal_size"        : "(2*64*1024)",
+            "storage.storage_type"                      : "TDB_INTERNAL",
+            "mbed-mesh-api.heap-size"                   : 65535
+        }
+    },
+    "config": {
+        "bootloader-size": {
+            "help"      : "Helper macro to enable calculation of rom regions. target.header_offset and target.app_offset still needs to be calculated manually, though.",
+            "value"     : "(32*1024)",
+            "macro_name": "MBED_BOOTLOADER_SIZE"
+        },
+        "radio-type":{
+            "help": "options are ATMEL, MCR20, SPIRIT1, S2LP",
+            "value": "S2LP"
+        },
+        "backhaul-driver": {
+            "help": "options are ETH, SLIP, EMAC, CELL",
+            "value": "EMAC"
+        },
+        "mesh-mode": {
+            "help": "Mesh networking mode. Options are LOWPAN_ND, LOWPAN_WS and THREAD",
+            "value": "LOWPAN_WS"
+        },
+        "nanostack_extended_heap": {
+            "help": "Add additional memory region to nanostack heap. Valid only for selected platforms. Region size may vary depending of the toolchain.",
+            "value": true
+        }
+    }
+}
