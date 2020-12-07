@@ -8,8 +8,7 @@ The code layout is organized like this:
 
 ```
 configs/                  Contains Mbed TLS configs and Wisun Certificates
-bootloader/               Contains Boot-loader for DISCO_F769NI
-app/                      Contains the application code
+bootloader/               Contains Bootloader for DISCO_F769NI and MIMXRT1050_EVK platform
 mbed_app.json             Build time configuration file
 ```
 
@@ -27,12 +26,12 @@ To work with the pelion-border-router application, you need the following:
 
 On border router the memory that is needed on board depends on network size. The RAM memory needed for a node on a network is about 650 bytes and needed KV store size is about 100 bytes for a node. KV store is needed to store Wi-SUN parameters during power cycle. Some Wi-SUN parameters need to be stored to KV store periodically, e.g. once in an hour. The size of periodically stored parameters is less than hundred bytes.
 
-## Configuring and compiling pelion-border-router application
+## Configuring and compiling pelion-border-router application for DISCO_F769NI
 
 1. Clone the repository if not done yet:
 ```
-git clone https://github.com/ARMmbed/pelion-border-router.git
-```    
+git clone https://github.com/PelionIoT/pelion-border-router.git
+```
 3. Go to `pelion-border-router` and deploy the dependencies:
 ```
 cd pelion-border-router
@@ -42,7 +41,7 @@ mbed deploy
 3. Configure Mbed CLI to use your **Device Management** account and board for `DISCO_F769NI`.
 ```
 mbed config -G CLOUD_SDK_API_KEY ak_123....abc
-mbed target DISCO_F769NI`
+mbed target DISCO_F769NI
 mbed toolchain GCC_ARM
 ```
 4. Use Mbed CLI to download a developer certificate and to create an update-related configuration for your device:
@@ -60,7 +59,7 @@ Alternatively, you can generate a developer certificate from [Pelion Device Mana
 <span class="notes">**Note:** When you go to production, please do not use the example Wi-SUN certificate files provided as is due to security reasons.</span>
 
 6. Wi-SUN configuration:
-[mbed_app.json](https://github.com/ARMmbed/pelion-border-router/blob/master/mbed_app.json) file contains configuration for Pelion Border Router application.
+[mbed_app.json](https://github.com/PelionIot/pelion-border-router/blob/master/mbed_app.json) file contains configuration for Pelion Border Router application.
 The Wi-SUN specific parameters are listed below.
 
 	| Field                               | Description                                                   |
@@ -97,6 +96,19 @@ The Pelion border router application should be connected to a backhaul network. 
 mbed compile -m DISCO_F769NI -t GCC_ARM
 ```
 
+## Enabling external RADIUS server interface
+
+You can enable external RADIUS server interface on the Pelion Border Router by setting RADIUS server IPv6 address and shared secret on Wi-SUN configuration:
+[mbed_app.json](https://github.com/PelionIot/pelion-border-router/blob/master/mbed_app.json) 
+
+The external RADIUS server specific parameters are listed below.
+
+	| Field                               | Description                                                   |
+	|-------------------------------------|---------------------------------------------------------------|
+	| `radius-server-ipv6-address`        | RADIUS Server IPv6 address in string format (e.g. \"2001:1234::1\") |
+	| `radius-shared-secret`              | RADIUS shared secret; ASCII string or sequence of bytes |
+	| `radius-shared-secret-len`          | RADIUS shared secret length; If length is not defined, strlen() is used to determine RADIUS shared secret length |
+
 ## Running the pelion border router application
 
 1. Find the  binary file `pelion-border-router.bin` in the `BUILD` folder.
@@ -123,7 +135,7 @@ Your device is now connected and ready for the firmware update. For development 
 	```
 2. When the update starts, the client tracing log shows:
 	```
-		Update progress = 0%
+	Update progress = 0%
 	```
 4. After this, the device reboots automatically and registers to Device Management.	
 
@@ -131,11 +143,6 @@ Your device is now connected and ready for the firmware update. For development 
 
 1. Initialize, connect and register to Pelion DM
 2. Initialize and bring up Wi-SUN Interface
-3. Interact with the user through the serial port (115200 bauds)
-   - Press enter through putty/minicom to simulate button
-   - Press `i` to print endpoint name
-   - Press Ctrl-C to to unregister
-   - Press `r` to reset storage and reboot (warning: it generates a new device ID!)
 
 ## Serial connection settings
 
@@ -150,18 +157,24 @@ If there is no input from the serial terminal, press the **Reset** button of the
 In the PuTTY main screen, save the session, and click **Open**. This opens a console window showing debug messages from the application. If the console screen is blank, you may need to press the **Reset** button of the board to see the debug information. The serial output from the pelion border router looks something like this in the console:
 ```
 Mbed Bootloader
-No Update image
+Update image is older
 [DBG ] Active firmware up-to-date
 booting...
-[INFO][plat]: Pelion-Border-Router
-Connect to network
+[INFO][App ]: Pelion Border Router Application
+[INFO][App ]: Fetching Backhaul Interface
+[INFO][App ]: Fetching Mesh Interface
+[INFO][App ]: Connect to Backhaul Interaface
 [INFO][IPV6]: Start Bootstrap
-[INFO][addr]: Tentative Address added to IF 1: fe80::280:e1ff:fe2d:3d
-[INFO][addr]: DAD passed on IF 1: fe80::280:e1ff:fe2d:3d
-[INFO][addr]: Tentative Address added to IF 1: 2401:4900:3369:4e2c:280:e1ff:fe2d:3d
-[INFO][addr]: DAD passed on IF 1: 2401:4900:3369:4e2c:280:e1ff:fe2d:3d
+[INFO][addr]: Tentative Address added to IF 1: fe80::280:e1ff:fe24:1c
+[INFO][addr]: DAD passed on IF 1: fe80::280:e1ff:fe24:1c
+[INFO][addr]: Tentative Address added to IF 1: 2001:14b8:1830:b000:280:e1ff:fe24:1c
+[INFO][icmp]: Route: ::/0 Lifetime: 60 Pref: 0
+[INFO][Ndns]: DNS Server: 2001:14b8:1830:8000::1 from: fe80::208:a2ff:fe0d:53 Lifetime: 60
+[INFO][Ndns]: DNS Search List: 0b:6c:6f:63:61:6c:64:6f:6d:61:69:6e:00 Lifetime: 60
+[INFO][icmp]: Route: ::/0 Lifetime: 60 Pref: 0
+[INFO][Ndns]: DNS Server: 2001:14b8:1830:8000::1 from: fe80::208:a2ff:fe0d:53 Lifetime: 60
+[INFO][Ndns]: DNS Search List: 0b:6c:6f:63:61:6c:64:6f:6d:61:69:6e:00 Lifetime: 60
+[INFO][addr]: DAD passed on IF 1: 2001:14b8:1830:b000:280:e1ff:fe24:1c
 [INFO][IPV6]: IPv6 bootstrap ready
-Network initialized, connected with IP 2401:4900:3369:4e2c:280:e1ff:fe2d:3d
-
-Start developer flow
+[INFO][App ]: Backhaul Interface connected with IP 2001:14b8:1830:b000:280:e1ff:fe24:1c
 ```

@@ -135,12 +135,6 @@
     #define MBEDTLS_SHA256_C
 #endif //MBEDTLS_SHA256_C
 
-// Disable the speed optimizations of SHA256, makes binary size smaller
-// on Cortex-M by 1800B with ARMCC5 and 1384B with GCC 6.3.
-#ifndef MBEDTLS_SHA256_SMALLER
-    #define MBEDTLS_SHA256_SMALLER
-#endif // MBEDTLS_SHA256_SMALLER
-
 #ifndef MBEDTLS_SSL_COOKIE_C
     #define MBEDTLS_SSL_COOKIE_C
 #endif //MBEDTLS_SSL_COOKIE_C
@@ -322,6 +316,7 @@
 // Wi-SUN Border Router packet encryption
 #define MBEDTLS_NIST_KW_C
 #define MBEDTLS_SHA1_C
+#define MBEDTLS_MD5_C
 
 // Enable new define to allow usage of Wi-SUN network security.
 #define MBEDTLS_PEM_PARSE_C
@@ -329,6 +324,11 @@
 #ifndef MBEDTLS_SSL_SRV_C
     #define MBEDTLS_SSL_SRV_C
 #endif //MBEDTLS_SSL_SRV_C
+
+// Need MBEDTLS_SSL_CONTEXT_SERIALIZATION and MBEDTLS_SSL_DTLS_CONNECTION_ID for CID feature
+#define MBEDTLS_SSL_CONTEXT_SERIALIZATION
+#define MBEDTLS_SSL_DTLS_CONNECTION_ID
+
 
 #include "mbedtls/check_config.h"
 
