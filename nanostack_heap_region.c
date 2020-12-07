@@ -31,6 +31,10 @@
 #define NANOSTACK_EXTENDED_HEAP_REGION_SIZE (250*1024)
 #endif
 
+#if defined(TARGET_MIMXRT1050_EVK)
+#define NANOSTACK_EXTENDED_HEAP_REGION_SIZE (4*1024*1024)
+#endif
+
 #if defined(__IAR_SYSTEMS_ICC__) || defined(__IAR_SYSTEMS_ASM__) || defined(__ICCARM__)
 // currently - no IAR suport
 #undef NANOSTACK_EXTENDED_HEAP_REGION_SIZE

@@ -1,9 +1,12 @@
 {
     "macros": [
+        "MBED_TRACE_MAX_LEVEL=TRACE_LEVEL_INFO",
         "MBED_CLIENT_USER_CONFIG_FILE=\"mbed_cloud_client_user_config.h\"",
         "MBED_CLOUD_CLIENT_USER_CONFIG_FILE=\"mbed_cloud_client_user_config.h\"",
         "PAL_PLATFORM_DEFINED_CONFIGURATION=\"mbedOS_SST.h\"",
-        "PAL_USER_DEFINED_CONFIGURATION=\"mbedOS_SST.h\""
+        "PAL_USER_DEFINED_CONFIGURATION=\"mbedOS_SST.h\"",
+        "PAL_DEFAULT_STAGGER_ESTIMATE=1",
+        "MBED_CLOUD_CLIENT_MULTICAST_SMALL_NETWORK"
     ],
     "target_overrides": {
         "*": {
@@ -17,6 +20,13 @@
             "update-client.storage-locations"           : 1,
             "mbed-trace.enable"                         : 1,
             "events.shared-stacksize"                   : 2048,
+            "nsapi.default-wifi-security"               : "WPA_WPA2",
+            "nsapi.default-wifi-ssid"                   : "\"SSID\"",
+            "nsapi.default-wifi-password"               : "\"PASSWORD\"",
+            "nsapi.default-cellular-apn"                : "\"APN\"",
+            "nsapi.default-cellular-sim-pin"            : null,
+            "nsapi.default-cellular-username"           : null,
+            "nsapi.default-cellular-password"           : null,
             "nsapi.default-stack"                       : "NANOSTACK",
             "nanostack-hal.event_loop_thread_stack_size": 8192,
             "mbed-mesh-api.wisun-regulatory-domain"     : "3",
@@ -31,6 +41,8 @@
             "mbed-mesh-api.wisun-bc-interval"           : 1020,
             "mbed-mesh-api.wisun-network-name"          : "\"Wi-SUN Network\"",
             "mbed-mesh-api.wisun-network-size"          : "NETWORK_SIZE_SMALL",
+            "mbed-mesh-api.6lowpan-nd-panid-filter"     : "0xFFFF",
+            "mbed-mesh-api.6lowpan-nd-security-mode"    : "NONE",
             "mbed-mesh-api.certificate-header"          : "\"configs/wisun_certificates.h\"",
             "mbed-mesh-api.root-certificate"            : "WISUN_ROOT_CERTIFICATE",
             "mbed-mesh-api.own-certificate"             : "WISUN_SERVER_CERTIFICATE",
@@ -110,11 +122,6 @@
         }
     },
     "config": {
-        "mbed-trace-max-level": {
-            "help"      : "Max trace level. Must be one of the following: [TRACE_LEVEL_DEBUG, TRACE_LEVEL_INFO, TRACE_LEVEL_WARN, TRACE_LEVEL_ERROR]",
-            "macro_name": "MBED_TRACE_MAX_LEVEL",
-            "value"     : "TRACE_LEVEL_INFO"
-        },
         "bootloader-size": {
             "help"      : "Helper macro to enable calculation of rom regions. target.header_offset and target.app_offset still needs to be calculated manually, though.",
             "value"     : "(32*1024)",
@@ -155,16 +162,6 @@
             "help"      : "Enable pre resolving of Pelion server addresses and distribute to Wi-SUN network to reduce the amount of DNS queries made by the devices during the network formation or in Pelion re-registration.",
             "options"   : [null, 1],
             "value"     : 1
-        },
-        "mem-stats-periodic-trace": {
-            "help"      : "Enable periodic traces of memory statistics.",
-            "option"    : [null, 1],
-            "value"     : 1
-        },
-        "mem-stats-periodic-trace-interval": {
-            "help"      : "Interval of periodic traces of memory statistics in milliseconds.",
-            "value_min" : 1000,
-            "value"     : 300000
         }
     }
 }
