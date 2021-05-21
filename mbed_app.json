@@ -1,6 +1,5 @@
 {
     "macros": [
-        "MBED_CLIENT_USER_CONFIG_FILE=\"mbed_cloud_client_user_config.h\"",
         "MBED_CLOUD_CLIENT_USER_CONFIG_FILE=\"mbed_cloud_client_user_config.h\"",
         "PAL_PLATFORM_DEFINED_CONFIGURATION=\"mbedOS_SST.h\"",
         "PAL_USER_DEFINED_CONFIGURATION=\"mbedOS_SST.h\""
@@ -8,7 +7,7 @@
     "target_overrides": {
         "*": {
             "target.features_add"                       : ["BOOTLOADER", "STORAGE"],
-            "target.macros_add"                         : ["ENABLE_ASYNC_REST_RESPONSE"],
+            "target.c_lib"                              : "std",
             "platform.stdio-baud-rate"                  : 115200,
             "platform.stdio-convert-newlines"           : true,
             "platform.stdio-buffered-serial"            : true,
@@ -48,7 +47,8 @@
             "nanostack-hal.use-kvstore"                 : true,
             "events.shared-highprio-stacksize"          : 3072,
             "events.shared-highprio-eventsize"          : 512,
-            "mbed-cloud-client.network-manager"         : 1
+            "mbed-cloud-client.network-manager"         : 1,
+            "mbed-cloud-client.observable-timer"        : 15
         },
         "DISCO_F769NI": {
             "target.macros_add"                         : ["MBEDTLS_USER_CONFIG_FILE=\"configs/mbedTLSConfig_pelion_border_router.h\""],
@@ -71,8 +71,11 @@
             "storage.storage_type"                      : "TDB_INTERNAL",
             "mbed-mesh-api.heap-size"                   : 65535
         },
+        "DISCO_F769NI_AGGRESSIVE": {
+            "target.macros_add"                         : ["PAL_DEFAULT_STAGGER_ESTIMATE=1", "MBED_CLOUD_CLIENT_MULTICAST_SMALL_NETWORK"]
+        },
         "MIMXRT1050_EVK": {
-            "target.macros_add"                         : ["MBEDTLS_USER_CONFIG_FILE=\"configs/mbedTLSConfig_pelion_border_router.h\"","MBED_APP_COMPILE","SE2435L_PA","DISABLE_AT24MAC","HAVE_AT86RF215M", "ARM_UC_DELTAPAAL_WRITE_BUF_SIZE=256"],
+            "target.macros_add"                         : ["MBEDTLS_USER_CONFIG_FILE=\"configs/mbedTLSConfig_pelion_border_router.h\"", "MBED_APP_COMPILE", "DISABLE_AT24MAC", "ARM_UC_DELTAPAAL_WRITE_BUF_SIZE=256"],
             "target.network-default-interface-type"     : "ETHERNET",
             "target.macros_remove"                      : ["HYPERFLASH_BOOT"],
             "target.tickless-from-us-ticker"            : true,
@@ -97,16 +100,10 @@
             "mbed-mesh-api.heap-size"                   : 65535,
             "radio-type"                                : "ATMEL",
             "s2lp.provide-default"                      : false,
-            "atmel-rf.provide-default"                  : true,
-            "atmel-rf.SPI_MOSI"                         : "GPIO_B0_02",
-            "atmel-rf.SPI_MISO"                         : "GPIO_B0_01",
-            "atmel-rf.SPI_SCLK"                         : "GPIO_B0_03",
-            "atmel-rf.SPI_CS"                           : "GPIO_B0_00",
-            "atmel-rf.SPI_RST"                          : "GPIO_AD_B1_09",
-            "atmel-rf.SPI_IRQ"                          : "GPIO_AD_B1_08",
-            "atmel-rf.SE2435L_CSD"                      : "GPIO_B1_02",
-            "atmel-rf.SE2435L_ANT_SEL"                  : "GPIO_B1_03",
-            "atmel-rf.SPI_SLP"                          : "A4"
+            "atmel-rf.provide-default"                  : true
+        },
+        "MIMXRT1050_EVK_AGGRESSIVE": {
+            "target.macros_add"                         : ["PAL_DEFAULT_STAGGER_ESTIMATE=1", "MBED_CLOUD_CLIENT_MULTICAST_SMALL_NETWORK"]
         }
     },
     "config": {
@@ -165,6 +162,11 @@
             "help"      : "Interval of periodic traces of memory statistics in milliseconds.",
             "value_min" : 1000,
             "value"     : 300000
+        },
+        "active-keep-alive": {
+            "help"      : "Enable active application logic to keep client connectivity alive to Device Management.",
+            "option"    : [null, 1],
+            "value"     : null
         }
     }
 }

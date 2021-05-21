@@ -1,0 +1,8 @@
+{
+    "DISCO_F769NI_AGGRESSIVE": {
+        "inherits": ["DISCO_F769NI"]
+    },
+    "MIMXRT1050_EVK_AGGRESSIVE": {
+        "inherits": ["MIMXRT1050_EVK"]
+    }
+}

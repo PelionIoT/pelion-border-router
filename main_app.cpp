@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 ARM Limited. All rights reserved.
+ * Copyright (c) 2021 Pelion. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  * Licensed under the Apache License, Version 2.0 (the License); you may
  * not use this file except in compliance with the License.
@@ -39,10 +39,27 @@
 
 #include "mbed-trace/mbed_trace.h"             // Required for mbed_trace_*
 
+#ifdef MBED_MEM_TRACING_ENABLED
+#include "mbed_mem_trace.h"
+#endif
+
 #define TRACE_GROUP "App "
 
 #ifndef DNS_QUERY_SET_PERIOD
 #define DNS_QUERY_SET_PERIOD 12*60*60*1000     // 12 Hours
+#endif
+
+#ifndef BACKHAUL_CONNECTION_RETRY_TIMEOUT
+#define BACKHAUL_CONNECTION_RETRY_TIMEOUT 1000
+#endif
+#ifndef BACKHAUL_CONNECTION_RETRY_TIMEOUT_MAX
+#define BACKHAUL_CONNECTION_RETRY_TIMEOUT_MAX 300*1000
+#endif
+
+#if defined MBED_CONF_APP_ACTIVE_KEEP_ALIVE && (MBED_CONF_APP_ACTIVE_KEEP_ALIVE == 1)
+#ifndef BACKHAUL_CONNECTION_KEEPALIVE_INTERVAL
+#define BACKHAUL_CONNECTION_KEEPALIVE_INTERVAL 1000*60*5 // 5 minutes
+#endif
 #endif
 
 static NetworkInterface *backhaul_interface = NULL;
@@ -61,6 +78,11 @@ static M2MResource *m2m_deregister_res;
 static M2MResource *m2m_factory_reset_res;
 
 static EventQueue *queue;
+
+#if defined MBED_CONF_APP_ACTIVE_KEEP_ALIVE && (MBED_CONF_APP_ACTIVE_KEEP_ALIVE == 1)
+static EventQueue *keep_alive_queue;
+#endif
+
 #if defined MBED_CONF_APP_MEM_STATS_PERIODIC_TRACE && (MBED_CONF_APP_MEM_STATS_PERIODIC_TRACE == 1)
 #if !defined MBED_CONF_APP_MEM_STATS_PERIODIC_TRACE_INTERVAL
 #error "MBED_CONF_APP_MEM_STATS_PERIODIC_TRACE_INTERVAL is not defined"
@@ -187,6 +209,22 @@ static void factory_reset(void *)
 
     kcm_factory_reset();
 }
+
+#if defined MBED_CONF_APP_ACTIVE_KEEP_ALIVE && (MBED_CONF_APP_ACTIVE_KEEP_ALIVE == 1)
+static void keep_backhaul_connection_alive(void)
+{
+#ifdef MBED_MEM_TRACING_ENABLED
+    static int callback_set = 0;
+    if(!callback_set)
+    {
+        mbed_mem_trace_set_callback(mbed_mem_trace_default_callback);
+        callback_set = 1;
+    }
+#endif
+    tr_info("Keep backhaul connection aliven\n");
+    cloud_client->resume(backhaul_interface);
+}
+#endif
 
 static app_status_t PDMC_create_resource(void)
 {
@@ -340,13 +378,54 @@ static void mesh_interface_status_callback(nsapi_event_t status, intptr_t param)
     }
 }
 
+static app_status_t backhaul_connect(void)
+{
+    int status;
+    SocketAddress sa;
+    int retry_count = 0;
+    int next_retry_interval;
+    bool backhaul_connected = false;
+
+    if (backhaul_interface == NULL) {
+        tr_warn("Backhaul Interface is not Initialized yet");
+        return APP_STATUS_FAIL;
+    }
+
+    while (!backhaul_connected) {
+        retry_count++;
+        status = backhaul_interface->connect();
+        tr_info ("Backhaul MAC Address: %s", backhaul_interface->get_mac_address() ? backhaul_interface->get_mac_address() : "None");
+        if (status == NSAPI_ERROR_OK || status == NSAPI_ERROR_IS_CONNECTED) {
+            status = backhaul_interface->get_ip_address(&sa);
+            if (status != NSAPI_ERROR_OK) {
+                tr_debug("Backhaul get_ip_address() - failed, status %d", status);
+                goto retry;
+            } else {
+                backhaul_connected = true;
+                continue;
+            }
+        }
+        tr_warn("Failed to connect! error=%d. Retry %d", status, retry_count);
+retry:
+        (void) backhaul_interface->disconnect();
+        next_retry_interval = BACKHAUL_CONNECTION_RETRY_TIMEOUT * retry_count;
+        ThisThread::sleep_for(next_retry_interval > BACKHAUL_CONNECTION_RETRY_TIMEOUT_MAX ? BACKHAUL_CONNECTION_RETRY_TIMEOUT_MAX : next_retry_interval);
+    }
+
+    tr_info("Backhaul Interface connected with IP %s", sa.get_ip_address() ? sa.get_ip_address() : "None");
+    return APP_STATUS_SUCCESS;
+}
+
 #ifndef MBED_TEST_MODE
 int main(void)
 {
     int status;
-    SocketAddress sa;
 
     queue = mbed_event_queue();
+
+#if defined MBED_CONF_APP_ACTIVE_KEEP_ALIVE && (MBED_CONF_APP_ACTIVE_KEEP_ALIVE == 1)
+    keep_alive_queue = mbed_event_queue();
+#endif
 
 #if defined MBED_CONF_APP_MEM_STATS_PERIODIC_TRACE && (MBED_CONF_APP_MEM_STATS_PERIODIC_TRACE == 1)
     mem_stats_queue = mbed_event_queue();
@@ -359,8 +438,14 @@ int main(void)
         return -1;
     }
 
-    // Mount default kvstore
     tr_info("Pelion Border Router Application");
+#if defined(MBED_MAJOR_VERSION) && defined(MBED_MINOR_VERSION) && defined(MBED_PATCH_VERSION)
+    tr_info("Mbed OS version %d.%d.%d", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
+#else
+    tr_info("Mbed OS version <UNKNOWN>");
+#endif
+    
+    // Mount default kvstore
     status = kv_init_storage_config();
     if (status != MBED_SUCCESS) {
         tr_err("kv_init_storage_config() - failed, status %d", status);
@@ -387,18 +472,18 @@ int main(void)
         return -1;
     }
 
-    tr_info("Connect to Backhaul Interaface");
-    status = backhaul_interface->connect();
-    if (status != NSAPI_ERROR_OK) {
-        tr_err("Backhaul Interface failed to connect with %d", status);
+#if defined MBED_CONF_MBED_CLOUD_CLIENT_NETWORK_MANAGER && (MBED_CONF_MBED_CLOUD_CLIENT_NETWORK_MANAGER == 1)
+    if (ws_network_manager.configure_factory_mac_address(mesh_interface, backhaul_interface) != NM_ERROR_NONE) {
+        tr_err("Failed to configure Factory MAC addresses on Interfaces");
         return -1;
     }
-    status = backhaul_interface->get_ip_address(&sa);
-    if (status != 0) {
-        tr_err("get_ip_address failed with %d", status);
-        return -2;
+#endif
+
+    tr_info("Connect to Backhaul Interaface");
+    if (backhaul_connect() == APP_STATUS_FAIL) {
+        tr_err("Failed to connect Backhaul Interface");
+        return -1;
     }
-    tr_info("Backhaul Interface connected with IP %s", sa.get_ip_address());
 
     if (PDMC_init() == APP_STATUS_FAIL) {
         tr_err("Failed to Initialize Cloud Client: Terminating Application");
@@ -443,6 +528,11 @@ int main(void)
 #endif
 
     cloud_client->setup(backhaul_interface);
+
+#if defined MBED_CONF_APP_ACTIVE_KEEP_ALIVE && (MBED_CONF_APP_ACTIVE_KEEP_ALIVE == 1)
+    keep_alive_queue->call_every(BACKHAUL_CONNECTION_KEEPALIVE_INTERVAL, keep_backhaul_connection_alive);
+#endif
+
 
     queue->dispatch_forever();
 }
