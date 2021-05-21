@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 ARM Limited. All rights reserved.
+ * Copyright (c) 2020-2021 Pelion. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  * Licensed under the Apache License, Version 2.0 (the License); you may
  * not use this file except in compliance with the License.
@@ -31,6 +31,9 @@
 #define MBED_CLOUD_CLIENT_SUPPORT_UPDATE
 #define MBED_CLOUD_CLIENT_SUPPORT_MULTICAST_UPDATE
 #define MBED_CLOUD_CLIENT_MULTICAST_BORDER_ROUTER
+
+/* Interval between firmware fragments during multicasting. */
+#define MBED_CLOUD_CLIENT_MULTICAST_INTERVAL     60
 
 /* set download buffer size in bytes (min. 1024 bytes) */
 #define MBED_CLOUD_CLIENT_UPDATE_BUFFER          2048

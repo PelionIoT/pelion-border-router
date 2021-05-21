@@ -31,7 +31,7 @@ On border router the memory that is needed on board depends on network size. The
 1. Clone the repository if not done yet:
 ```
 git clone https://github.com/PelionIoT/pelion-border-router.git
-```
+```    
 3. Go to `pelion-border-router` and deploy the dependencies:
 ```
 cd pelion-border-router
@@ -40,15 +40,26 @@ mbed deploy
 
 3. Configure Mbed CLI to use your **Device Management** account and board for `DISCO_F769NI`.
 ```
-mbed config -G CLOUD_SDK_API_KEY ak_123....abc
 mbed target DISCO_F769NI
 mbed toolchain GCC_ARM
 ```
-4. Use Mbed CLI to download a developer certificate and to create an update-related configuration for your device:
-```
-mbed device-management init -d arm.com --model-name example-app --force -q
-```
-Alternatively, you can generate a developer certificate from [Pelion Device Management Portal](https://www.pelion.com/docs/device-management/current/connecting/provisioning-development-devices.html) and replace the dummy-file `mbed_cloud_dev_credentials.c` with your own certificate file.
+
+1. [Download a developer certificate from Device Management Portal](https://developer.pelion.com/docs/device-management/current/provisioning-process/provisioning-development-devices.html).
+
+1. Copy the `mbed_cloud_dev_credentials.c` file to the root folder of the example application.
+
+1. Create update-related configuration and credentials using the [`manifest-tool`](https://github.com/PelionIoT/manifest-tool) python package:
+
+    1. Upgrade to `manifest-tool` version 2.2.0 or higher:
+        ```
+        pip install --upgrade manifest-tool
+        ```
+    1. Initialize the developer environment:
+        ```
+        manifest-dev-tool init --access-key <Device Management access key>
+        ```
+        <span class="notes">**Note:** When you create a firmware update image for a deployed device, you must use the same update-related configuration and credentials (update private key, public key certificate, `update_default_resources.c` and configuration files) you used in the original device firmware image. Therefore, you need to skip running this command as your environment should be already initialized.</span>
+
 
 5. Configure the application for your Wi-SUN network:
 	* Use the Wi-SUN certificate definitions file `configs/wisun_certificates.h`, or generate your own Wi-SUN certificates (recommended) file to the same location.
@@ -131,7 +142,10 @@ Your device is now connected and ready for the firmware update. For development 
 
 1. To update the firmware on your device:
 	```	
-	mbed device-management update device -D <Device ID>
+    manifest-dev-tool update-v1 \
+        --payload-path pelion-border-router_update.bin \
+        --device-id <Device ID>
+        --wait-for-completion
 	```
 2. When the update starts, the client tracing log shows:
 	```
