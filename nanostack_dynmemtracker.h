@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 ARM Limited. All rights reserved.
+ * Copyright (c) 2021 Pelion. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  * Licensed under the Apache License, Version 2.0 (the License); you may
  * not use this file except in compliance with the License.
@@ -14,19 +14,17 @@
  * limitations under the License.
  */
 
-#ifndef NANOSTACK_HEAP_REGION_H
-#define NANOSTACK_HEAP_REGION_H
+#ifndef NS_DYN_MEM_TRACKER_H
+#define NS_DYN_MEM_TRACKER_H
 
-#ifdef __cplusplus
-extern "C"
-{
+#ifdef MBED_CONF_APP_NSDYNMEMTRACKER_PRINT_INTERVAL
+
+int8_t ns_dyn_mem_tracker_init(void);
+
+#else
+
+#define ns_dyn_mem_tracker_init()
+
 #endif
 
-void nanostack_heap_region_add(void);
-
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* NANOSTACK_HEAP_REGION_H */
+#endif /* NS_DYN_MEM_TRACKER_H */

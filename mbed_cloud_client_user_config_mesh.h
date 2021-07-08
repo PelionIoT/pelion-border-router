@@ -28,11 +28,20 @@
 #endif
 
 
+#define MBED_CLOUD_CLIENT_SUPPORT_UPDATE
+
+ #ifdef MBED_CLOUD_CLIENT_SUPPORT_UPDATE
+/* set flag to enable update support in mbed Cloud client */
+#define MBED_CLOUD_CLIENT_MULTICAST_BORDER_ROUTER
+#endif
+
 #define MBED_CLOUD_CLIENT_SUPPORT_MULTICAST_UPDATE
 
 /* Interval between firmware fragments during multicasting. */
 #define MBED_CLOUD_CLIENT_MULTICAST_INTERVAL     60
 
+/* set download buffer size in bytes (min. 1024 bytes) */
+#define MBED_CLOUD_CLIENT_UPDATE_BUFFER          2048
 
 #define MBED_CLOUD_DEV_UPDATE_CERT
 #define MBED_CLOUD_DEV_UPDATE_ID

@@ -23,7 +23,6 @@
 #include "mesh_system.h"
 #include "WisunInterface.h"
 #include "WisunBorderRouter.h"
-#include "nanostack_heap_region.h"
 #include "MeshInterfaceNanostack.h"
 #include "network_dns_optimization.h"
 #include "cloud_client_helper.h"
@@ -35,6 +34,9 @@
 #endif
 #if defined MBED_CONF_APP_MEM_STATS_PERIODIC_TRACE && (MBED_CONF_APP_MEM_STATS_PERIODIC_TRACE == 1)
 #include "nsdynmemLIB.h"
+#endif
+#ifdef MBED_CONF_APP_NSDYNMEMTRACKER_PRINT_INTERVAL
+#include "nanostack_dynmemtracker.h"
 #endif
 
 #include "mbed-trace/mbed_trace.h"             // Required for mbed_trace_*
@@ -56,14 +58,8 @@
 #define BACKHAUL_CONNECTION_RETRY_TIMEOUT_MAX 300*1000
 #endif
 
-#if defined MBED_CONF_APP_ACTIVE_KEEP_ALIVE && (MBED_CONF_APP_ACTIVE_KEEP_ALIVE == 1)
-#ifndef BACKHAUL_CONNECTION_KEEPALIVE_INTERVAL
-#define BACKHAUL_CONNECTION_KEEPALIVE_INTERVAL 1000*60*5 // 5 minutes
-#endif
-#endif
-
 static NetworkInterface *backhaul_interface = NULL;
-static NetworkInterface *mesh_interface = NULL;
+static WisunInterface *mesh_interface = NULL;
 static WisunBorderRouter ws_border_router;
 static MbedCloudClient *cloud_client = NULL;
 static M2MObjectList m2m_obj_list;
@@ -159,7 +155,11 @@ static void client_registered(void)
 #if defined(MBED_CONF_APP_WISUN_NETWORK_DNS_OPTIMIZATION) && (MBED_CONF_APP_WISUN_NETWORK_DNS_OPTIMIZATION == 1)
     network_dns_opt_configure(&ws_border_router, backhaul_interface);
     network_dns_opt_query_set();
+#if MBED_MAJOR_VERSION > 5
+    queue->call_every(std::chrono::milliseconds(DNS_QUERY_SET_PERIOD), network_dns_opt_query_set);
+#else
     queue->call_every(DNS_QUERY_SET_PERIOD, network_dns_opt_query_set);
+#endif
 #endif
 }
 
@@ -209,22 +209,6 @@ static void factory_reset(void *)
 
     kcm_factory_reset();
 }
-
-#if defined MBED_CONF_APP_ACTIVE_KEEP_ALIVE && (MBED_CONF_APP_ACTIVE_KEEP_ALIVE == 1)
-static void keep_backhaul_connection_alive(void)
-{
-#ifdef MBED_MEM_TRACING_ENABLED
-    static int callback_set = 0;
-    if(!callback_set)
-    {
-        mbed_mem_trace_set_callback(mbed_mem_trace_default_callback);
-        callback_set = 1;
-    }
-#endif
-    tr_info("Keep backhaul connection aliven\n");
-    cloud_client->resume(backhaul_interface);
-}
-#endif
 
 static app_status_t PDMC_create_resource(void)
 {
@@ -335,8 +319,7 @@ static int8_t get_mesh_iface_id()
         return MESH_ERROR_UNKNOWN;
     }
 
-    InterfaceNanostack *nano_mesh_if = reinterpret_cast<InterfaceNanostack *>(mesh_interface);
-    int8_t mesh_if_id = nano_mesh_if->get_interface_id();
+    int8_t mesh_if_id = mesh_interface->get_interface_id();
     if (mesh_if_id < 0) {
         return MESH_ERROR_UNKNOWN;
     }
@@ -394,7 +377,7 @@ static app_status_t backhaul_connect(void)
     while (!backhaul_connected) {
         retry_count++;
         status = backhaul_interface->connect();
-        tr_info ("Backhaul MAC Address: %s", backhaul_interface->get_mac_address() ? backhaul_interface->get_mac_address() : "None");
+        tr_info("Backhaul MAC Address: %s", backhaul_interface->get_mac_address() ? backhaul_interface->get_mac_address() : "None");
         if (status == NSAPI_ERROR_OK || status == NSAPI_ERROR_IS_CONNECTED) {
             status = backhaul_interface->get_ip_address(&sa);
             if (status != NSAPI_ERROR_OK) {
@@ -409,7 +392,14 @@ static app_status_t backhaul_connect(void)
 retry:
         (void) backhaul_interface->disconnect();
         next_retry_interval = BACKHAUL_CONNECTION_RETRY_TIMEOUT * retry_count;
-        ThisThread::sleep_for(next_retry_interval > BACKHAUL_CONNECTION_RETRY_TIMEOUT_MAX ? BACKHAUL_CONNECTION_RETRY_TIMEOUT_MAX : next_retry_interval);
+        if (next_retry_interval > BACKHAUL_CONNECTION_RETRY_TIMEOUT_MAX) {
+            next_retry_interval = BACKHAUL_CONNECTION_RETRY_TIMEOUT_MAX;
+        }
+#if MBED_MAJOR_VERSION > 5
+        ThisThread::sleep_for(std::chrono::milliseconds(next_retry_interval));
+#else
+        ThisThread::sleep_for(next_retry_interval);
+#endif
     }
 
     tr_info("Backhaul Interface connected with IP %s", sa.get_ip_address() ? sa.get_ip_address() : "None");
@@ -429,7 +419,15 @@ int main(void)
 
 #if defined MBED_CONF_APP_MEM_STATS_PERIODIC_TRACE && (MBED_CONF_APP_MEM_STATS_PERIODIC_TRACE == 1)
     mem_stats_queue = mbed_event_queue();
+#if MBED_MAJOR_VERSION > 5
+    mem_stats_queue->call_every(std::chrono::milliseconds(MBED_CONF_APP_MEM_STATS_PERIODIC_TRACE_INTERVAL), print_mem_stats);
+#else
     mem_stats_queue->call_every(MBED_CONF_APP_MEM_STATS_PERIODIC_TRACE_INTERVAL, print_mem_stats);
+#endif
+#endif
+
+#ifdef MBED_CONF_APP_NSDYNMEMTRACKER_PRINT_INTERVAL
+    ns_dyn_mem_tracker_init();
 #endif
 
     status = mbed_trace_init();
@@ -444,17 +442,13 @@ int main(void)
 #else
     tr_info("Mbed OS version <UNKNOWN>");
 #endif
-    
+
     // Mount default kvstore
     status = kv_init_storage_config();
     if (status != MBED_SUCCESS) {
         tr_err("kv_init_storage_config() - failed, status %d", status);
         return -1;
     }
-
-    mesh_system_init();
-
-    nanostack_heap_region_add();
 
     // Backhaul Interface
     tr_info("Fetching Backhaul Interface");
@@ -466,7 +460,7 @@ int main(void)
 
     // Mesh Interface
     tr_info("Fetching Mesh Interface");
-    mesh_interface = MeshInterface::get_default_instance();
+    mesh_interface = static_cast<WisunInterface *>(MeshInterface::get_default_instance());
     if (mesh_interface == NULL) {
         tr_err("Failed to get default MeshInterface");
         return -1;
@@ -529,10 +523,9 @@ int main(void)
 
     cloud_client->setup(backhaul_interface);
 
-#if defined MBED_CONF_APP_ACTIVE_KEEP_ALIVE && (MBED_CONF_APP_ACTIVE_KEEP_ALIVE == 1)
-    keep_alive_queue->call_every(BACKHAUL_CONNECTION_KEEPALIVE_INTERVAL, keep_backhaul_connection_alive);
+#ifdef MBED_MEM_TRACING_ENABLED
+    mbed_mem_trace_set_callback(mbed_mem_trace_default_callback);
 #endif
-
 
     queue->dispatch_forever();
 }
