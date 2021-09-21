@@ -32,7 +32,7 @@ On border router the memory that is needed on board depends on network size. The
 ```
 git clone https://github.com/PelionIoT/pelion-border-router.git
 ```    
-3. Go to `pelion-border-router` and deploy the dependencies:
+2. Go to `pelion-border-router` and deploy the dependencies:
 ```
 cd pelion-border-router
 mbed deploy
@@ -44,11 +44,11 @@ mbed target DISCO_F769NI
 mbed toolchain GCC_ARM
 ```
 
-1. [Download a developer certificate from Device Management Portal](https://developer.pelion.com/docs/device-management/current/provisioning-process/provisioning-development-devices.html).
+4. [Download a developer certificate from Device Management Portal](https://developer.pelion.com/docs/device-management/current/provisioning-process/provisioning-development-devices.html).
 
-1. Copy the `mbed_cloud_dev_credentials.c` file to the root folder of the example application.
+5. Copy the `mbed_cloud_dev_credentials.c` file to the root folder of the example application.
 
-1. Create update-related configuration and credentials using the [`manifest-tool`](https://github.com/PelionIoT/manifest-tool) python package:
+6. Create update-related configuration and credentials using the [`manifest-tool`](https://github.com/PelionIoT/manifest-tool) python package:
 
     1. Upgrade to `manifest-tool` version 2.2.0 or higher:
         ```
@@ -61,15 +61,18 @@ mbed toolchain GCC_ARM
         <span class="notes">**Note:** When you create a firmware update image for a deployed device, you must use the same update-related configuration and credentials (update private key, public key certificate, `update_default_resources.c` and configuration files) you used in the original device firmware image. Therefore, you need to skip running this command as your environment should be already initialized.</span>
 
 
-5. Configure the application for your Wi-SUN network:
+7. Configure the application for your Wi-SUN network:
 	* Use the Wi-SUN certificate definitions file `configs/wisun_certificates.h`, or generate your own Wi-SUN certificates (recommended) file to the same location.
 	* Ensure the required Wi-SUN certificates (in file `configs/wisun_certificates.h`) are valid (`WISUN_ROOT_CERTIFICATE`, `WISUN_SERVER_CERTIFICATE`, `WISUN_SERVER_KEY`), and match the settings you are using with the border router. Invalid certificates or certificates that don't match prevent mesh network formation.
+	* Use the configuration `mesh-iface-start-control` in JSON file to decide whether to start the mesh interface automatically or not. 
+		* Set the value of `mesh-iface-start-control` to "BLOCK" to prevent starting of mesh interface automatically. In this mode, various configurations of mesh interface can be configured from Pelion server before starting it. There is a timeout, after which the mesh interface will be started automatically. This timeout can be configured using `mesh-iface-start-timeout` parameter of the JSON file. Setting the value of `mesh-iface-start-timeout` to 0 will prevent the starting of mesh interface for infinite time.
+		* Set the value of `mesh-iface-start-control` to "CONTINUE" to start the mesh interface automatically. In this mode, the mesh interface will be started right after registering to the Pelion. The parameter `mesh-iface-start-timeout` has no effect in this mode.
 
 <span class="tips">**Tip:** Use the same Mbed OS version in the border router and the application (Device Management Client).</span>
 
 <span class="notes">**Note:** When you go to production, please do not use the example Wi-SUN certificate files provided as is due to security reasons.</span>
 
-6. Wi-SUN configuration:
+8. Wi-SUN configuration:
 [mbed_app.json](https://github.com/PelionIot/pelion-border-router/blob/master/mbed_app.json) file contains configuration for Pelion Border Router application.
 The Wi-SUN specific parameters are listed below.
 
@@ -93,15 +96,15 @@ The Wi-SUN specific parameters are listed below.
 
 Regulatory domain, operating class and operating mode are defined in the Wi-SUN PHY-specification.
 
-7. Backhaul connectivity:
+9. Backhaul connectivity:
 The Pelion border router application should be connected to a backhaul network. This enables the border router to connect to the pelion server as well as the Wi-SUN mesh network to the internet or a private LAN. The application supports Ethernet backhaul connectivity:
 	
-8. Enable Dual-Bank mode on DISCO_F769NI:
+10. Enable Dual-Bank mode on DISCO_F769NI:
 	* Connect the device using [STLink-Utility software](https://www.st.com/en/development-tools/stsw-link004.html)
 	* Go to Target->Option Bytes. Uncheck nDBANK option.
 	* Apply and disconnect.
 	
-8. Compile the application for `DISCO_F769NI`:
+11. Compile the application for `DISCO_F769NI`:
 
 ```
 mbed compile -m DISCO_F769NI -t GCC_ARM
@@ -151,7 +154,14 @@ Your device is now connected and ready for the firmware update. For development 
 	```
 	Update progress = 0%
 	```
-4. After this, the device reboots automatically and registers to Device Management.	
+3. After this, the device reboots automatically and registers to Device Management.	
+
+### Application resources
+The list of supported resources and corresponding parameters are listed below.
+|Resource Path | Resources | Values |
+|--------------|-----------|------------|
+|33455/0/13|Mesh Interface Control<br>(Get & Put Allowed)| **"CONTINUE"** - Start Mesh Interface Automatically.<br>**"BLOCK"** - Prevent Starting of Mesh Interface Automatically.|
+|33455/0/14|Application State<br>(Only Get Allowed)|**"Waiting Permission"** - Waiting Permission to Start the Mesh Interface.<br>**"Wi-SUN Booting"** - The Mesh Interface has been Started.<br>**"Wi-SUN Active"** - The Mesh Interface is Connected.|
 
 ### Program Flow
 
