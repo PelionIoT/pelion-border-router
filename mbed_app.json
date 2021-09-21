@@ -181,6 +181,15 @@
             "value_min" : 0,
             "value_max" : 6,
             "value"     : 1
+        },
+        "mesh-iface-start-control": {
+            "help"      : "To control the start of mesh interface with default configuration. If set to BLOCK, the mesh interface will not be started autometically",
+            "options"   : ["BLOCK", "CONTINUE"],
+            "value"     : "\"CONTINUE\""
+        },
+        "mesh-iface-start-timeout": {
+            "help"      : "The Mesh interface will be started after this timeout (in Seconds). Set to 0 to wait for infinite time",
+            "value"     : 600
         }
     }
 }
